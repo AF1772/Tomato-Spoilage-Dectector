@@ -1,10 +1,487 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Tomato Spoilage Detector</title>
+  <style>
+    /* ── Reset ───────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Page ────────────────────────────────────────────────────────── */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(145deg, #0d1117 0%, #161b22 50%, #1c2128 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    /* ── Card ────────────────────────────────────────────────────────── */
+    .card {
+      background: #ffffff;
+      border-radius: 22px;
+      padding: 46px 42px;
+      max-width: 560px;
+      width: 100%;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+    }
+
+    /* ── Header ──────────────────────────────────────────────────────── */
+    .header { text-align: center; margin-bottom: 32px; }
+    .header .tomato-icon { font-size: 3.2rem; margin-bottom: 10px; display: block; }
+    .header h1 {
+      font-size: 1.7rem;
+      color: #111;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .header p {
+      font-size: 0.88rem;
+      color: #8a8a8a;
+      line-height: 1.6;
+    }
+
+    /* ── Divider ─────────────────────────────────────────────────────── */
+    hr { border: none; border-top: 1.5px solid #f0f0f0; margin: 24px 0; }
+
+    /* ── Upload zone ─────────────────────────────────────────────────── */
+    .upload-zone {
+      position: relative;
+      border: 2.5px dashed #d8d8d8;
+      border-radius: 16px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s ease, background 0.2s ease;
+      margin-bottom: 20px;
+    }
+    .upload-zone:hover,
+    .upload-zone.active {
+      border-color: #e74c3c;
+      background: #fff9f9;
+    }
+    .upload-zone input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      width: 100%;
+      height: 100%;
+    }
+    .upload-zone .icon     { font-size: 2.6rem; margin-bottom: 12px; display: block; }
+    .upload-zone .main-txt { font-size: 1rem; font-weight: 600; color: #333; margin-bottom: 5px; }
+    .upload-zone .sub-txt  { font-size: 0.82rem; color: #b0b0b0; }
+
+    /* ── Preview ─────────────────────────────────────────────────────── */
+    #preview-section {
+      display: none;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    #preview-img {
+      width: 200px;
+      height: 200px;
+      object-fit: cover;
+      border-radius: 14px;
+      border: 2.5px solid #ebebeb;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.10);
+    }
+    #file-label {
+      display: block;
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: #aaa;
+      word-break: break-all;
+    }
+
+    /* ── Analyse button ──────────────────────────────────────────────── */
+    #btn-analyse {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      letter-spacing: 0.4px;
+      transition: opacity 0.2s, transform 0.15s;
+    }
+    #btn-analyse:hover:not(:disabled) {
+      opacity: 0.91;
+      transform: translateY(-1px);
+    }
+    #btn-analyse:active:not(:disabled) { transform: translateY(0); }
+    #btn-analyse:disabled {
+      background: #d5d5d5;
+      color: #a0a0a0;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    /* ── Spinner ─────────────────────────────────────────────────────── */
+    #spinner {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 16px;
+      font-size: 0.9rem;
+      color: #999;
+    }
+    .spin-ring {
+      width: 22px; height: 22px;
+      border: 3px solid #e8e8e8;
+      border-top-color: #e74c3c;
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Result panel ────────────────────────────────────────────────── */
+    #result-section {
+      display: none;
+      margin-top: 26px;
+      border-radius: 16px;
+      padding: 26px 24px;
+      animation: slideUp 0.35s ease;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .res-fresh   { background: #f0fdf5; border: 2px solid #22c55e; }
+    .res-spoiled { background: #fff2f2; border: 2px solid #ef4444; }
+
+    /* Label */
+    .res-label {
+      font-size: 2.4rem;
+      font-weight: 900;
+      text-align: center;
+      margin-bottom: 4px;
+    }
+    .lbl-fresh   { color: #16a34a; }
+    .lbl-spoiled { color: #dc2626; }
+
+    /* Confidence */
+    .res-conf {
+      text-align: center;
+      font-size: 0.95rem;
+      color: #666;
+      margin-bottom: 20px;
+    }
+
+    /* Probability bars */
+    .prob-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      color: #555;
+      margin-bottom: 5px;
+    }
+    .prob-name  { display: flex; align-items: center; gap: 7px; font-weight: 500; }
+    .prob-pct   { font-weight: 700; min-width: 48px; text-align: right; }
+    .track {
+      background: #ececec;
+      border-radius: 999px;
+      height: 11px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .fill {
+      height: 100%;
+      border-radius: 999px;
+      transition: width 0.65s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .fill-fresh   { background: linear-gradient(90deg, #16a34a, #22c55e); }
+    .fill-spoiled { background: linear-gradient(90deg, #dc2626, #ef4444); }
+
+    /* Caution note */
+    #caution-box {
+      display: none;
+      margin-top: 14px;
+      padding: 11px 15px;
+      background: #fffbeb;
+      border: 1.5px solid #f59e0b;
+      border-radius: 10px;
+      font-size: 0.84rem;
+      color: #92400e;
+      font-weight: 500;
+      line-height: 1.5;
+    }
+
+    /* Reset */
+    #btn-reset {
+      display: block;
+      margin: 18px auto 0;
+      background: none;
+      border: none;
+      font-size: 0.82rem;
+      color: #aaa;
+      text-decoration: underline;
+      cursor: pointer;
+      padding: 0;
+    }
+    #btn-reset:hover { color: #777; }
+
+    /* ── Footer ──────────────────────────────────────────────────────── */
+    .footer {
+      margin-top: 22px;
+      text-align: center;
+      font-size: 0.76rem;
+      color: #555;
+      line-height: 1.7;
+    }
+
+    /* ── Error toast ─────────────────────────────────────────────────── */
+    #error-toast {
+      display: none;
+      margin-top: 14px;
+      padding: 12px 16px;
+      background: #fff2f2;
+      border: 1.5px solid #ef4444;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      color: #b91c1c;
+    }
+  </style>
 </head>
 <body>
+
+<div class="card">
+
+  <!-- Header -->
+  <div class="header">
+    <span class="tomato-icon">🍅</span>
+    <h1>Tomato Spoilage Detector</h1>
+    <p>CNN-based binary classifier · Fresh vs Spoiled<br>
+       Upload a tomato image for an instant AI-powered assessment</p>
+  </div>
+
+  <hr/>
+
+  <!-- Upload zone -->
+  <div class="upload-zone" id="upload-zone">
+    <input type="file" id="file-input" accept="image/jpeg,image/png,image/webp"/>
+    <span class="icon">📷</span>
+    <div class="main-txt">Click to upload or drag &amp; drop</div>
+    <div class="sub-txt">JPG · PNG · WEBP &nbsp;|&nbsp; Max 16 MB</div>
+  </div>
+
+  <!-- Preview -->
+  <div id="preview-section">
+    <img id="preview-img" src="" alt="Uploaded tomato preview"/>
+    <span id="file-label"></span>
+  </div>
+
+  <!-- Button -->
+  <button id="btn-analyse" disabled onclick="runPrediction()">
+    Analyse Tomato
+  </button>
+
+  <!-- Spinner -->
+  <div id="spinner">
+    <div class="spin-ring"></div>
+    Analysing image...
+  </div>
+
+  <!-- Error -->
+  <div id="error-toast"></div>
+
+  <!-- Result -->
+  <div id="result-section">
+    <div class="res-label" id="res-label"></div>
+    <div class="res-conf"  id="res-conf"></div>
+
+    <!-- Fresh bar -->
+    <div class="prob-row">
+      <span class="prob-name">🟢 Fresh</span>
+      <span class="prob-pct" id="pct-fresh"></span>
+    </div>
+    <div class="track"><div class="fill fill-fresh" id="bar-fresh" style="width:0%"></div></div>
+
+    <!-- Spoiled bar -->
+    <div class="prob-row">
+      <span class="prob-name">🔴 Spoiled</span>
+      <span class="prob-pct" id="pct-spoiled"></span>
+    </div>
+    <div class="track"><div class="fill fill-spoiled" id="bar-spoiled" style="width:0%"></div></div>
+
+    <!-- Caution flag (Section 3.9) -->
+    <div id="caution-box"></div>
+
+    <!-- Reset -->
+    <button id="btn-reset" onclick="resetAll()">← Analyse another image</button>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    CNN-Based Tomato Food Spoilage Detection System<br>
+    Bells University of Technology &nbsp;|&nbsp; Student ID: 2021/10157
+  </div>
+
+</div><!-- /card -->
+
+<script>
+  "use strict";
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  let currentFile = null;
+
+  // ── Element references ────────────────────────────────────────────────────
+  const fileInput     = document.getElementById("file-input");
+  const uploadZone    = document.getElementById("upload-zone");
+  const previewSec    = document.getElementById("preview-section");
+  const previewImg    = document.getElementById("preview-img");
+  const fileLabel     = document.getElementById("file-label");
+  const btnAnalyse    = document.getElementById("btn-analyse");
+  const spinner       = document.getElementById("spinner");
+  const resultSection = document.getElementById("result-section");
+  const errorToast    = document.getElementById("error-toast");
+
+  // ── File input ────────────────────────────────────────────────────────────
+  fileInput.addEventListener("change", e => {
+    if (e.target.files.length > 0) loadFile(e.target.files[0]);
+  });
+
+  // ── Drag and drop ─────────────────────────────────────────────────────────
+  uploadZone.addEventListener("dragover", e => {
+    e.preventDefault();
+    uploadZone.classList.add("active");
+  });
+  uploadZone.addEventListener("dragleave", () => {
+    uploadZone.classList.remove("active");
+  });
+  uploadZone.addEventListener("drop", e => {
+    e.preventDefault();
+    uploadZone.classList.remove("active");
+    const f = e.dataTransfer.files[0];
+    if (f) loadFile(f);
+  });
+
+  function loadFile(file) {
+    const allowed = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowed.includes(file.type)) {
+      showError("Please upload a JPG, PNG, or WEBP image.");
+      return;
+    }
+    currentFile = file;
+    const reader = new FileReader();
+    reader.onload = e => {
+      previewImg.src = e.target.result;
+      fileLabel.textContent = file.name;
+      previewSec.style.display = "block";
+    };
+    reader.readAsDataURL(file);
+
+    btnAnalyse.disabled = false;
+    hideResult();
+    hideError();
+  }
+
+  // ── Prediction ────────────────────────────────────────────────────────────
+  async function runPrediction() {
+    if (!currentFile) return;
+
+    setLoading(true);
+    hideResult();
+    hideError();
+
+    const form = new FormData();
+    form.append("file", currentFile);
+
+    try {
+      const res  = await fetch("/predict", { method: "POST", body: form });
+      const data = await res.json();
+
+      if (!res.ok || data.error) {
+        showError(data.error || `Server error (${res.status})`);
+        return;
+      }
+      renderResult(data);
+
+    } catch (err) {
+      showError("Could not reach the server. Is app.py running on port 5000?");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ── Render result ─────────────────────────────────────────────────────────
+  function renderResult(data) {
+    const isFresh   = data.label === "Fresh";
+    const emoji     = isFresh ? "✅" : "❌";
+    const labelCls  = isFresh ? "lbl-fresh" : "lbl-spoiled";
+    const panelCls  = isFresh ? "res-fresh"  : "res-spoiled";
+
+    resultSection.className = panelCls;
+
+    document.getElementById("res-label").innerHTML =
+      `<span class="${labelCls}">${emoji} ${data.label}</span>`;
+
+    document.getElementById("res-conf").textContent =
+      `Confidence: ${data.confidence}%`;
+
+    document.getElementById("pct-fresh").textContent   = data.prob_fresh   + "%";
+    document.getElementById("pct-spoiled").textContent = data.prob_spoiled + "%";
+
+    // Bars animate via CSS transition
+    requestAnimationFrame(() => {
+      document.getElementById("bar-fresh").style.width   = data.prob_fresh   + "%";
+      document.getElementById("bar-spoiled").style.width = data.prob_spoiled + "%";
+    });
+
+    // Caution flag (Section 3.9 — human review for low confidence)
+    const cautionBox = document.getElementById("caution-box");
+    if (data.needs_review) {
+      cautionBox.textContent     = data.review_note;
+      cautionBox.style.display   = "block";
+    } else {
+      cautionBox.style.display   = "none";
+    }
+
+    resultSection.style.display = "block";
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  function setLoading(on) {
+    spinner.style.display   = on ? "flex" : "none";
+    btnAnalyse.disabled     = on;
+  }
+
+  function hideResult() {
+    resultSection.style.display = "none";
+    document.getElementById("bar-fresh").style.width   = "0%";
+    document.getElementById("bar-spoiled").style.width = "0%";
+  }
+
+  function showError(msg) {
+    errorToast.textContent   = "⚠ " + msg;
+    errorToast.style.display = "block";
+  }
+
+  function hideError() {
+    errorToast.style.display = "none";
+  }
+
+  function resetAll() {
+    currentFile             = null;
+    fileInput.value         = "";
+    previewSec.style.display  = "none";
+    previewImg.src          = "";
+    fileLabel.textContent   = "";
+    btnAnalyse.disabled     = true;
+    hideResult();
+    hideError();
+  }
+</script>
 
 </body>
 </html>

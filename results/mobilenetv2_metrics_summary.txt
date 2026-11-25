@@ -1,0 +1,16 @@
+Architecture        : MOBILENETV2
+TensorFlow version  : 2.20.0
+Decision threshold  : 0.25
+Test samples        : 627
+
+Accuracy            : 0.9665
+Precision           : 0.9823
+Recall (Spoiled)    : 0.9569
+F1-Score            : 0.9694
+AUC-ROC             : 0.9955
+
+Confusion Matrix:
+  TP=333  TN=273  FP=6  FN=15
+
+SVM Baseline Accuracy : 0.9107
+CNN improvement       : +5.58%
